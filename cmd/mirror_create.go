@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aptly-dev/aptly/deb"
@@ -20,6 +21,8 @@ func aptlyMirrorCreate(cmd *commander.Command, args []string) error {
 	downloadSources := LookupOption(context.Config().DownloadSourcePackages, context.Flags(), "with-sources")
 	downloadUdebs := context.Flags().Lookup("with-udebs").Value.Get().(bool)
 	downloadInstaller := context.Flags().Lookup("with-installer").Value.Get().(bool)
+	queryFilter := context.Flags().Lookup("filter").Value.String()
+	queryFilterFilePath := context.Flags().Lookup("filter-file").Value.String()
 
 	var (
 		mirrorName, archiveURL, distribution string
@@ -42,7 +45,16 @@ func aptlyMirrorCreate(cmd *commander.Command, args []string) error {
 		return fmt.Errorf("unable to create mirror: %s", err)
 	}
 
-	repo.Filter = context.Flags().Lookup("filter").Value.String()
+	if queryFilter != "" {
+		repo.Filter = queryFilter
+	} else if queryFilterFilePath != "" {
+		contents, err := os.ReadFile(queryFilterFilePath)
+		if err != nil {
+			return fmt.Errorf("unable to read filter from a file: %s", err)
+		}
+		repo.Filter = string(contents)
+	}
+
 	repo.FilterWithDeps = context.Flags().Lookup("filter-with-deps").Value.Get().(bool)
 	repo.SkipComponentCheck = context.Flags().Lookup("force-components").Value.Get().(bool)
 	repo.SkipArchitectureCheck = context.Flags().Lookup("force-architectures").Value.Get().(bool)
@@ -100,6 +112,7 @@ Example:
 	cmd.Flag.Bool("with-sources", false, "download source packages in addition to binary packages")
 	cmd.Flag.Bool("with-udebs", false, "download .udeb packages (Debian installer support)")
 	cmd.Flag.String("filter", "", "filter packages in mirror")
+	cmd.Flag.String("filter-file", "", "read the filter from a file")
 	cmd.Flag.Bool("filter-with-deps", false, "when filtering, include dependencies of matching packages as well")
 	cmd.Flag.Bool("force-components", false, "(only with component list) skip check that requested components are listed in Release file")
 	cmd.Flag.Bool("force-architectures", false, "(only with architecture list) skip check that requested architectures are listed in Release file")

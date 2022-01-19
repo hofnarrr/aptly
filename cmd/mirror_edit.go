@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aptly-dev/aptly/pgp"
 	"github.com/aptly-dev/aptly/query"
@@ -10,6 +11,8 @@ import (
 )
 
 func aptlyMirrorEdit(cmd *commander.Command, args []string) error {
+	var queryFilter string
+	var queryFilterFilePath string
 	var err error
 	if len(args) != 1 {
 		cmd.Usage()
@@ -31,7 +34,9 @@ func aptlyMirrorEdit(cmd *commander.Command, args []string) error {
 	context.Flags().Visit(func(flag *flag.Flag) {
 		switch flag.Name {
 		case "filter":
-			repo.Filter = flag.Value.String()
+			queryFilter = flag.Value.String()
+		case "filter-file":
+			queryFilterFilePath = flag.Value.String()
 		case "filter-with-deps":
 			repo.FilterWithDeps = flag.Value.Get().(bool)
 		case "with-installer":
@@ -48,6 +53,16 @@ func aptlyMirrorEdit(cmd *commander.Command, args []string) error {
 
 	if repo.IsFlat() && repo.DownloadUdebs {
 		return fmt.Errorf("unable to edit: flat mirrors don't support udebs")
+	}
+
+	if queryFilter != "" {
+		repo.Filter = queryFilter
+	} else if queryFilterFilePath != "" {
+		contents, err := os.ReadFile(queryFilterFilePath)
+		if err != nil {
+			return fmt.Errorf("unable to read filter from a file: %s", err)
+		}
+		repo.Filter = string(contents)
 	}
 
 	if repo.Filter != "" {
@@ -102,6 +117,7 @@ Example:
 
 	cmd.Flag.String("archive-url", "", "archive url is the root of archive")
 	cmd.Flag.String("filter", "", "filter packages in mirror")
+	cmd.Flag.String("filter-file", "", "read the filter from a file")
 	cmd.Flag.Bool("filter-with-deps", false, "when filtering, include dependencies of matching packages as well")
 	cmd.Flag.Bool("ignore-signatures", false, "disable verification of Release file signatures")
 	cmd.Flag.Bool("with-installer", false, "download additional not packaged installer files")
