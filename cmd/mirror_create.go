@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"os"
+	"io/ioutil"
 	"strings"
 
 	"github.com/aptly-dev/aptly/deb"
@@ -48,7 +48,7 @@ func aptlyMirrorCreate(cmd *commander.Command, args []string) error {
 	if queryFilter != "" {
 		repo.Filter = queryFilter
 	} else if queryFilterFilePath != "" {
-		contents, err := os.ReadFile(queryFilterFilePath)
+		contents, err := ioutil.ReadFile(queryFilterFilePath)
 		if err != nil {
 			return fmt.Errorf("unable to read filter from a file: %s", err)
 		}
